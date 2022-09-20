@@ -26,9 +26,9 @@ You can install the development version of WEPPemulator from
 devtools::install_github("jarad/WEPPemulator")
 ```
 
-## Example
+## Usage
 
-### Read the data
+### Setup
 
 ``` r
 library(WEPPR)
@@ -42,11 +42,23 @@ fpath_cli <- system.file("extdata", "092.63x040.90.cli", package="WEPPR")
 slp <- read_slp(fpath_slp)
 sol <- read_sol(fpath_sol)
 cli <- read_cli(fpath_cli)
+```
 
+### Interpolate Slope
+
+``` r
 interpolate_slp(slp)
+```
 
+### Interpolate Soil
+
+``` r
 slp_sol <- merge_slp_sol(slp, sol)
 interpolate_sol(slp_sol)
+```
 
+### Interpolate Climate file
+
+``` r
 interpolate_cli(cli, filename = "092.63x040.90")
 ```
