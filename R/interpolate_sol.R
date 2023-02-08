@@ -33,7 +33,7 @@ interpolate_sol <- function(slp_sol) {
     # duplicate rows based on count
     dups_sol <- filter_num %>%
         group_by(layer) %>%
-        group_map( ~ get_dup_count(.x)) %>%
+        group_map( ~ WEPPemulator:::get_dup_count(.x)) %>%
         unlist() %>%
         cbind(freq = ., filter_num) %>%
         mutate(freq = map(freq, seq_len)) %>%
@@ -51,7 +51,8 @@ interpolate_sol <- function(slp_sol) {
             names_from = c(layer, id, solthk_bin, norm_cum_dist),
             names_glue = "sol_{.value}_{round(norm_cum_dist, 3)}_{solthk_bin}",
             values_from = c(salb:rfg)
-        )
+        ) %>%
+        summarise(across(where(is.numeric), ~ max(.x, na.rm = TRUE)))
 
     return(int_sol)
 }
@@ -61,7 +62,6 @@ interpolate_sol <- function(slp_sol) {
 #'
 #' @param sol A soil object
 #' @return A numeric vector of duplicate counts
-#' @export
 #' @examples
 #' dup_counts <- get_dup_count(sol)
 #' dup_counts
