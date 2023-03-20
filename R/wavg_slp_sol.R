@@ -1,6 +1,7 @@
 #' Return weighted averages of slope soil object
 #'
-#' @param slp_sol A slp_sol object
+#' @param slp A slp object
+#' @param sol A sol object
 #' @return a data frame with 3 columns with the output of the 3 methods.
 #' @export
 #' @examples
