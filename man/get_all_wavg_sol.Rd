@@ -7,7 +7,9 @@
 get_all_wavg_sol(slp, sol)
 }
 \arguments{
-\item{slp_sol}{A slp_sol object}
+\item{slp}{A slp object}
+
+\item{sol}{A sol object}
 }
 \value{
 a data frame with 3 columns with the output of the 3 methods.
