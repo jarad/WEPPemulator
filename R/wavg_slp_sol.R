@@ -12,20 +12,31 @@
 #' get_all_wavg_sol(slp, sol)
 
 get_all_wavg_sol <- function(slp, sol) {
+    if (!require(tidyr))
+        stop("You must install the 'tidyr' package.")
 
     slp_sol <- WEPPR:::merge_slp_sol(slp, sol)
 
     # impute missing numerical columns with 0
     slp_sol <- slp_sol %>% replace(is.na(.), 0)
 
-    return(
-        data.frame(
-            wavg1 = get_wavg_sol(slp_sol, w_dist = 0, w_thk = 0),
-            wavg2 = get_wavg_sol(slp_sol, w_dist = 1, w_thk = 1),
-            wavg3 = get_wavg_sol(slp_sol, w_dist = 2, w_thk = 1),
-            wavg4 = get_wavg_sol(slp_sol, w_dist = 1, w_thk = 2)
-        )
+    all_wavg <- rbind(
+        WEPPemulator:::get_wavg_sol(slp_sol, w_dist = 0, w_thk = 0),
+        WEPPemulator:::get_wavg_sol(slp_sol, w_dist = 1, w_thk = 1),
+        WEPPemulator:::get_wavg_sol(slp_sol, w_dist = 2, w_thk = 1),
+        WEPPemulator:::get_wavg_sol(slp_sol, w_dist = 1, w_thk = 2)
     )
+
+    all_wavg$wavg <- c("wavg0", "wavg1", "wavg2", "wavg3")
+
+    wide_out <- all_wavg %>%
+        tidyr::pivot_wider(
+            names_from = wavg,
+            names_glue = "sol_{.value}_{wavg}",
+            values_from = salb:rfg
+        )
+
+    return(wide_out)
 }
 
 #' Return weighted average of x

@@ -12,9 +12,9 @@ get_all_wavg <- function(slp) {
     slp_extra <- tweak_slp(slp)
 
     return(data.frame(
-        wavg0 = get_wavg(slp_extra, weight = 0),
-        wavg1 = get_wavg(slp_extra, weight = 1),
-        wavg2 = get_wavg(slp_extra, weight = 2)
+        slp_slope_wavg0 = get_wavg(slp_extra, weight = 0),
+        slp_slope_wavg1 = get_wavg(slp_extra, weight = 1),
+        slp_slope_wavg2 = get_wavg(slp_extra, weight = 2)
     ))
 }
 
