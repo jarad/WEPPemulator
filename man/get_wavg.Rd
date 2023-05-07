@@ -2,27 +2,34 @@
 % Please edit documentation in R/wavg_slp.R
 \name{get_wavg}
 \alias{get_wavg}
-\title{Return weighted average of slope based on weight parameter}
+\title{Calculate the weighted average slope of a slope-length product data frame}
 \usage{
-get_wavg(slp_extra, weight)
+get_wavg(slp, w)
 }
 \arguments{
-\item{slp_extra}{A slp object with additional columns}
+\item{slp}{A data frame containing the slope and length values for each
+segment of a hillslope. The data frame should have two columns, "x" for
+segment length and "slope" for segment slope.}
 
-\item{weight}{An integer value (0, 1, 2) specifying the method to use for
-weighted average calculation}
+\item{w}{A weight function that specifies the contribution of each slope
+value to the weighted average. The function should take a single argument,
+the distance along the hillslope, and return a weight value for that
+distance. The weight function should be non-negative and integrable over
+the length of the hillslope.}
 }
 \value{
-the weighted average of slope based on the specified weight
+The weighted average slope of the SLP data frame.
 }
 \description{
-Return weighted average of slope based on weight parameter
+This function calculates the weighted average slope of a slope-length product
+(SLP) data frame using a weight function. The weight function determines
+the contribution of each slope value to the weighted average, and can be
+specified by the user.
 }
 \examples{
-fpath_slp <- system.file("extdata", "071000090603_2.slp", package = "WEPPR")
+fpath_slp <-system.file("extdata", "071000090603_2.slp", package = "WEPPR")
 slp <- read_slp(fpath_slp)
-slp_extra <- tweak_slp(slp)
-get_wavg(slp_extra, weight = 0)
-get_wavg(slp_extra, weight = 1)
-get_wavg(slp_extra, weight = 2)
+w_const <- function(t) 1
+get_wavg(slp, Vectorize(w_const))
+
 }

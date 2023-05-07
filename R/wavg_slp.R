@@ -9,111 +9,57 @@
 #' get_all_wavg(slp)
 
 get_all_wavg <- function(slp) {
-    slp_extra <- tweak_slp(slp)
+
+    max_dist <- max(WEPPR:::calculate_total_distance(slp))
+    b <- 10
 
     return(data.frame(
-        slp_slope_wavg0 = get_wavg(slp_extra, weight = 0),
-        slp_slope_wavg1 = get_wavg(slp_extra, weight = 1),
-        slp_slope_wavg2 = get_wavg(slp_extra, weight = 2)
+        slp_slope_wavg0 = get_wavg(slp, Vectorize(function(t) 1)),
+        slp_slope_wavg1 = get_wavg(slp, function(t) 1 - (t / max_dist)),
+        slp_slope_wavg2 = get_wavg(slp, function(t) b^t)
     ))
 }
 
-#' Add new columns to slp object for weighted average calculation
+#' Calculate the weighted average slope of a slope-length product data frame
 #'
-#' Creates the following columns:
-#' - dist_diff (the difference between total distances)
-#' - avg_slp (rolling average with window size of 2)
-#' - dist_max (the total distance of each OFE)
+#' This function calculates the weighted average slope of a slope-length product
+#' (SLP) data frame using a weight function. The weight function determines
+#' the contribution of each slope value to the weighted average, and can be
+#' specified by the user.
 #'
-#' @param slp A slp object
-#' @return a data frame with 3 additional distance and slope columns
-tweak_slp <- function(slp) {
-    class(slp) <- "data.frame"
-    slp$total_dist <- WEPPR:::calculate_total_distance(slp)
-
-    slp_extra <- slp %>%
-        mutate(
-            dist_diff = total_dist - lag(total_dist, default = 0),
-            avg_slp = zoo::rollmean(
-                slope,
-                k = 2,
-                fill = 0,
-                align = "right"
-            )
-        ) %>%
-        group_by(n) %>%
-        mutate(dist_max = max(distance))
-
-    return(slp_extra)
-}
-
-#' Return weighted average of slope
+#' @param slp A data frame containing the slope and length values for each
+#'   segment of a hillslope. The data frame should have two columns, "x" for
+#'   segment length and "slope" for segment slope.
+#' @param w A weight function that specifies the contribution of each slope
+#'   value to the weighted average. The function should take a single argument,
+#'   the distance along the hillslope, and return a weight value for that
+#'   distance. The weight function should be non-negative and integrable over
+#'   the length of the hillslope.
 #'
-#' @param s vector of slopes
-#' @param d vector of distances
-#' @return the weighted average of slope by distance
+#' @return The weighted average slope of the SLP data frame.
+#'
 #' @examples
-#' s <- c(0, 0.5, 1)
-#' d <- c(1, 2, 3)
-#' wavg(s, d)
-wavg <- function(s, d) {
-    avg <- sum(s * d) / sum(d)
-
-    return(avg)
-}
-
-#' Return weighted average of slope based on weight parameter
-#'
-#' @param slp_extra A slp object with additional columns
-#' @param weight An integer value (0, 1, 2) specifying the method to use for
-#' weighted average calculation
-#' @return the weighted average of slope based on the specified weight
-#' @examples
-#' fpath_slp <- system.file("extdata", "071000090603_2.slp", package = "WEPPR")
+#' fpath_slp <-system.file("extdata", "071000090603_2.slp", package = "WEPPR")
 #' slp <- read_slp(fpath_slp)
-#' slp_extra <- tweak_slp(slp)
-#' get_wavg(slp_extra, weight = 0)
-#' get_wavg(slp_extra, weight = 1)
-#' get_wavg(slp_extra, weight = 2)
-get_wavg <- function(slp_extra, weight) {
-    if (weight == 0) {
-        avg <- slp_extra$slope[nrow(slp_extra)]
-    } else if (weight == 1) {
-        s <- slp_extra$avg_slp
-        d <- slp_extra$dist_diff
-        avg <- wavg(s, d)
-    } else if (weight == 2) {
-        tri_area <- function(adj) {
-            opposite <- adj * tan(angle * pi / 180)
-            area <- (opposite * adj) / 2
-            return(area)
-        }
+#' w_const <- function(t) 1
+#' get_wavg(slp, Vectorize(w_const))
+#'
+get_wavg <- function(slp, w) {
+    slp_d <- slp %>%
+        WEPPR:::remove_slp_transitions() %>%
+        mutate(cuml_dist = WEPPR:::calculate_total_distance(.)) %>%
+        mutate(norm_cuml_dist = cuml_dist / max(cuml_dist))
 
-        angle <- 45
-        df <- slp_extra %>%
-            select(n, total_dist) %>%
-            group_by(n) %>%
-            summarize(cnt = n(), max_dist = max(total_dist))
+    numerator <- integrate(function(t) {
+        y_t <- approx(slp_d$norm_cuml_dist, slp_d$slope, xout = t)$y
+        y_t * w(t)
+    }, lower = 0, upper = 1)$value
 
-        count <- df$cnt
-        dist <- df$max_dist
+    denominator <- integrate(function(t) {
+        w(t)
+    }, lower = 0, upper = 1)$value
 
-        s <- slp_extra$avg_slp
-        a <- c()
+    weighted_slope <- numerator / denominator
 
-        for (i in 1:length(dist)) {
-            a <- c(a, tri_area(dist[i]))
-
-            if (i != 1) {
-                a[i] <- a[i] - a[i - 1]
-            }
-        }
-        a <- rep(a, count)
-
-        avg <- sum(s * a) / sum(a)
-    } else {
-        stop("Invalid weight value. Please use 0, 1, or 2.")
-    }
-
-    return(avg)
+    return(weighted_slope)
 }
